@@ -30,7 +30,3 @@ python inference.py
 This is a simple sentiment classifier using an encoder-only architecture in PyTorch.
 The model classifies texts as positive or negative. 👍👎
 
-```
-
-Скопируй весь блок вместе с тройными апострофами!
-```
