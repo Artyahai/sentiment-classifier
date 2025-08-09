@@ -1,19 +1,19 @@
 import torch
 import torch.nn as nn 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-import math
+device = 'cuda' if torch.cuda.is_available() else 'cpu' # define device for training lop 
+import math 
 
-class InputEmbeddings(nn.Module):
-    def __init__(self, d_model:int, vocab_size:int)->None:
+class InputEmbeddings(nn.Module): #Creates for all words embeddings 
+    def __init__(self, d_model:int, vocab_size:int)->None: 
         super().__init__()
         self.d_model = d_model
         self.vocab_size = vocab_size
         self.embedding = nn.Embedding(vocab_size, d_model, device=device)
     def forward(self, x):
-        return self.embedding(x) * math.sqrt(self.d_model)
+        return self.embedding(x) * math.sqrt(self.d_model) #embeddings formula 
 
     
-class PositionalEncoding(nn.Module):
+class PositionalEncoding(nn.Module): #for each embedding we apply the position 
     def __init__(self, d_model:int, seq_len:int, dropout:float=0.1)->None:
         super().__init__()
         self.d_model = d_model
@@ -22,15 +22,15 @@ class PositionalEncoding(nn.Module):
         pe = torch.zeros(seq_len, d_model)
         position = torch.arange(0, seq_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
+        pe[:, 0::2] = torch.sin(position * div_term) # sin formula
+        pe[:, 1::2] = torch.cos(position * div_term) # cos frmula
         pe = pe.unsqueeze(0)
         self.register_buffer('pe', pe)
     def forward(self, x):
         x = x + self.pe[:, :x.size(1), :]
         return self.dropout(x)
-
-class MultiHeadAttention(nn.Module):
+ 
+class MultiHeadAttention(nn.Module): #attention heads 
     def __init__(self, d_model:int, h:int, dropout:float = 0.1):
         super().__init__()
         self.d_model = d_model
@@ -43,7 +43,7 @@ class MultiHeadAttention(nn.Module):
         self.w_o = nn.Linear(d_model, d_model, device=device)
         self.dropout = nn.Dropout(dropout)
     @staticmethod
-    def attention(query, key, value, mask, dropout):
+    def attention(query, key, value, mask, dropout): #Attention function
         d_k = query.shape[-1]
         attention_scores = (query @ key.transpose(-2, -1)) / math.sqrt(d_k)
         if mask is not None:
@@ -52,8 +52,8 @@ class MultiHeadAttention(nn.Module):
         if dropout is not None:
             attention_scores = dropout(attention_scores)
         return (attention_scores @ value), attention_scores
-    def forward(self, q, k, v, mask):
-        query = self.w_q(q)
+    def forward(self, q, k, v, mask): # creating 3 vectors(Q,K,V) for attention formula
+        query = self.w_q(q) 
         key = self.w_k(k)
         value = self.w_v(v)
         query = query.view(query.shape[0], query.shape[1], self.h, self.d_k).transpose(1, 2)
@@ -80,7 +80,7 @@ class ResidualConnection(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.normalization = LayerNormalization(d_model)
     def forward(self, x, sub_layer):
-        return x + self.dropout(sub_layer(self.normalization(x)))
+        return x + self.dropout(sub_layer(self.normalization(x))) 
 
 
 class FeedForwardBlock(nn.Module):
@@ -91,11 +91,11 @@ class FeedForwardBlock(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.linear_2 = nn.Linear(d_ff, d_model, device=device)
     def forward(self, x):
-        return self.linear_2(self.dropout(self.relu(self.linear_1(x)))) 
+        return self.linear_2(self.dropout(self.relu(self.linear_1(x))))  #FFN formula
 
 
 class EncoderBlock(nn.Module):
-    def __init__(self, d_model:int,h:int, d_ff:int, dropout:float = 0.1):
+    def __init__(self, d_model:int,h:int, d_ff:int, dropout:float = 0.1): # Unit FFN and Attention 
         super().__init__()
         self.self_attention = MultiHeadAttention(d_model, h, dropout)
         self.feed_forward = FeedForwardBlock(d_ff, d_model, dropout)
@@ -108,7 +108,7 @@ class EncoderBlock(nn.Module):
 
 
 class Classifier(nn.Module):
-    def __init__(self, d_model:int, vocab_size:int, seq_len:int, h:int, d_ff:int, num_classes:int, num_layers:int = 6, dropout:float = 0.1) -> None:
+    def __init__(self, d_model:int, vocab_size:int, seq_len:int, h:int, d_ff:int, num_classes:int, num_layers:int = 6, dropout:float = 0.1) -> None: #Class for classification
         super().__init__()
         self.embeddings = InputEmbeddings(d_model, vocab_size)
         self.pos_encoding = PositionalEncoding(d_model, seq_len, dropout)
